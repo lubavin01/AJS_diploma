@@ -164,6 +164,8 @@ export default class GamePlay {
 
   onNewGameClick(event) {
     event.preventDefault();
+    console.log('onNewGameClick', event);
+    
     this.newGameListeners.forEach(o => o.call(null));
   }
 

@@ -1,3 +1,6 @@
+import themes from './themes';
+const {prairie, desert, arctic, mountain} = themes;
+
 export default class GameController {
   constructor(gamePlay, stateService) {
     this.gamePlay = gamePlay;
@@ -5,8 +8,12 @@ export default class GameController {
   }
 
   init() {
-    // TODO: add event listeners to gamePlay events
-    // TODO: load saved stated from stateService
+
+    console.log('game controller - init');
+
+    this.gamePlay.drawUi(prairie);
+
+    this.gamePlay.addCellEnterListener(this.onCellEnter);
   }
 
   onCellClick(index) {
@@ -14,7 +21,8 @@ export default class GameController {
   }
 
   onCellEnter(index) {
-    // TODO: react to mouse enter
+    console.log('cell enter', index);
+    
   }
 
   onCellLeave(index) {
