@@ -9,5 +9,6 @@ export default class Character {
     this.defence = 0;
     this.health = 50;
     this.type = type;
+    this.dead = false;
   }
 }

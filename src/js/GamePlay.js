@@ -1,9 +1,9 @@
 import { calcHealthLevel, calcTileType } from './utils';
 
+
 export default class GamePlay {
   constructor() {
     this.boardSize = 8;
-    this.container = null;
     this.boardEl = null;
     this.cells = [];
     this.cellClickListeners = [];
@@ -12,7 +12,11 @@ export default class GamePlay {
     this.newGameListeners = [];
     this.saveGameListeners = [];
     this.loadGameListeners = [];
+
+    this.selectedChar = null;
   }
+
+
 
   bindToDOM(container) {
     if (!(container instanceof HTMLElement)) {
@@ -61,6 +65,8 @@ export default class GamePlay {
     }
 
     this.cells = Array.from(this.boardEl.children);
+
+
   }
 
   /**
@@ -74,6 +80,10 @@ export default class GamePlay {
     }
 
     for (const position of positions) {
+      if (position.character.dead) {
+        continue;
+      }
+
       const cellEl = this.boardEl.children[position.position];
       const charEl = document.createElement('div');
       charEl.classList.add('character', position.character.type);
@@ -148,7 +158,7 @@ export default class GamePlay {
   onCellEnter(event) {
     event.preventDefault();
     const index = this.cells.indexOf(event.currentTarget);
-    this.cellEnterListeners.forEach(o => o.call(null, index));
+    this.cellEnterListeners.forEach(o => o(index));
   }
 
   onCellLeave(event) {
@@ -165,7 +175,7 @@ export default class GamePlay {
   onNewGameClick(event) {
     event.preventDefault();
     console.log('onNewGameClick', event);
-    
+
     this.newGameListeners.forEach(o => o.call(null));
   }
 
@@ -188,8 +198,8 @@ export default class GamePlay {
   }
 
   selectCell(index, color = 'yellow') {
-    this.deselectCell(index);
     this.cells[index].classList.add('selected', `selected-${color}`);
+    // this.selectedCellIndex = index;
   }
 
   deselectCell(index) {
@@ -205,7 +215,7 @@ export default class GamePlay {
   hideCellTooltip(index) {
     this.cells[index].title = '';
   }
-  
+
   showDamage(index, damage) {
     return new Promise((resolve) => {
       const cell = this.cells[index];
@@ -229,5 +239,23 @@ export default class GamePlay {
     if (this.container === null) {
       throw new Error('GamePlay not bind to DOM');
     }
+  }
+
+  selectChar(posChar) {
+    this.deselectChar();
+
+    this.selectedChar = posChar;
+    this.selectCell(posChar.position);
+  }
+
+  deselectChar() {
+    if (this.selectedChar) {
+      this.deselectCell(this.selectedChar.position);
+      this.selectedChar = null;
+    }
+  }
+
+  showCharacterTooltip(posCharacter, index) {
+    this.showCellTooltip(`${String.fromCodePoint(0x1F396)} ${posCharacter.character.level} ${String.fromCodePoint(0x2694)} ${posCharacter.character.attack} ${String.fromCodePoint(0x1F6E1)} ${posCharacter.character.defence} ${String.fromCodePoint(0x2764)} ${posCharacter.character.health}`, index);
   }
 }

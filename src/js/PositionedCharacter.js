@@ -1,4 +1,5 @@
 import Character from './Character';
+// import Board from './Board';
 
 export default class PositionedCharacter {
   constructor(character, position) {
