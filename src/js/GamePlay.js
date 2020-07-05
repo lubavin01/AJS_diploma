@@ -202,7 +202,18 @@ export default class GamePlay {
     // this.selectedCellIndex = index;
   }
 
+  selectCellGreen(index) {
+    this.deselectCell(this.selectedCellGreen);
+    const cell = this.cells[index];
+    if (cell) {
+      cell.classList.add('selected', `selected-green`);
+      this.selectedCellGreen = index;
+    }
+  }
+
   deselectCell(index) {
+    if (!index) { return };
+
     const cell = this.cells[index];
     cell.classList.remove(...Array.from(cell.classList)
       .filter(o => o.startsWith('selected')));

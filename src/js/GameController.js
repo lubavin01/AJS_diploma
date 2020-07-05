@@ -1,17 +1,25 @@
 import themes from './themes';
 const { prairie, desert, arctic, mountain } = themes;
+const levels = [prairie, desert, arctic, mountain];
 
 import cursors from './cursors';
 const { auto, pointer, crosshair, notallowed } = cursors;
 
 import Board from './Board';
 import GameState from './GameState';
+import AI from './Ai';
 
 export default class GameController {
   constructor(gamePlay, stateService) {
+
     this.gamePlay = gamePlay;
     this.stateService = stateService;
     this.gameState = new GameState({ boardSize: this.gamePlay.boardSize });
+    this.ai = new AI(this, this.gamePlay);
+
+    Board.boardSize = this.gamePlay.boardSize;
+    Board.playerTeam = this.gameState.playerTeam;
+    Board.enemyTeam = this.gameState.enemyTeam;
 
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
@@ -25,7 +33,11 @@ export default class GameController {
       this.gameState = new GameState({ boardSize: this.gamePlay.boardSize });
     }
 
-    this.gamePlay.drawUi(prairie);
+    Board.positionedCharacters = this.gameState.positionedCharacters;
+
+    const levelIndex = this.gameState.level % 4;
+    const theme = levels[levelIndex];
+    this.gamePlay.drawUi(theme);
     this.gamePlay.redrawPositions(this.gameState.positionedCharacters);
   }
 
@@ -35,16 +47,33 @@ export default class GameController {
       // not available
       return;
     } else if (info.positionedCharacter && info.attack) {
-      this.attack(info.positionedCharacter);
-      this.gameState.toggleCurrentMove();
-      this.checkRoundEnd();
+      await this.attack(info.positionedCharacter);
+
+      const roundCode = this.checkRoundEnd();
+      if (roundCode === 1) {
+        this.startNewRound();
+      } else if (roundCode === -1) {
+        this.restartRound();
+      } else {
+        this.makeComputerMove()
+      }
+
+      //this.gameState.toggleCurrentMove();
 
     } else if (info.positionedCharacter && info.select) {
       this.gamePlay.selectChar(info.positionedCharacter);
 
     } else if (info.move) {
       this.move(index);
-      this.gameState.toggleCurrentMove();
+
+      const roundCode = this.checkRoundEnd();
+      if (roundCode === 1) {
+        this.startNewRound();
+      } else if (roundCode === -1) {
+        this.restartRound();
+      } else {
+        this.makeComputerMove()
+      }
     }
   }
 
@@ -57,15 +86,14 @@ export default class GameController {
       this.gamePlay.setCursor(crosshair);
       this.gamePlay.selectCell(index, 'red');
       this.gamePlay.showCharacterTooltip(info.positionedCharacter, index);
-      //this.gamePlay.showCellTooltip(`${String.fromCodePoint(0x1F396)} ${character.character.level} ${String.fromCodePoint(0x2694)} ${character.character.attack} ${String.fromCodePoint(0x1F6E1)} ${character.character.defence} ${String.fromCodePoint(0x2764)} ${character.character.health}`, index);
     } else if (info.positionedCharacter && info.select) {
       this.gamePlay.setCursor(pointer);
       this.gamePlay.selectCell(index, 'yellow');
       this.gamePlay.showCharacterTooltip(info.positionedCharacter, index);
-      //this.gamePlay.showCellTooltip(`${String.fromCodePoint(0x1F396)} ${character.character.level} ${String.fromCodePoint(0x2694)} ${character.character.attack} ${String.fromCodePoint(0x1F6E1)} ${character.character.defence} ${String.fromCodePoint(0x2764)} ${character.character.health}`, index);
     } else if (info.move) {
       this.gamePlay.setCursor(pointer);
-      this.gamePlay.selectCell(index, 'green');
+      //this.gamePlay.selectCell(index, 'green');
+      this.gamePlay.selectCellGreen(index);
     }
   }
 
@@ -81,13 +109,16 @@ export default class GameController {
 
   onSaveGameClick() {
     const state = {
-      positionedCharacters: this.gameState.positionedCharacters,
+      enemyTeam: this.gameState.enemyTeam,
+      playerTeam: this.gameState.playerTeam,
       currentMove: this.gameState.currentMove,
       level: this.gameState.level,
+      boardSize: this.boardSize
     };
 
-
     this.stateService.save(state);
+
+    console.log('game saved');
   }
 
   onLoadGameClick() {
@@ -100,9 +131,19 @@ export default class GameController {
   }
 
   checkRoundEnd() {
-    if (!this.gameState.enemyTeam.find(i => !i.dead)) {
-      console.log('round ended');
+    if (!this.gameState.enemyTeam.find(i => !i.character.dead)) {
+      console.log('player won round');
+
+      return 1;
     }
+
+    if (!this.gameState.playerTeam.find(i => !i.character.dead)) {
+      console.log('player lost round');
+      this.restartRound();
+      return -1;
+    }
+
+    return 0;
   }
 
   async attack(victimPositionedCharacter) {
@@ -174,4 +215,33 @@ export default class GameController {
       }
     }
   }
+
+  startNewRound() {
+
+    this.gameState.level += 1;
+    this.gameState.playerTeam.forEach(i => {
+      i.character.level += 1;
+      i.character.health = 100;
+    });
+
+    this.gameState.changePlayerTeamToInitialPosition();
+
+    // переинициализируем состояние игры
+    this.gameState = new GameState({
+      level: this.gameState.level,
+      playerTeam: this.gameState.playerTeam,
+    });
+
+    // перерисовываем
+    this.init();
+  }
+
+  restartRound() {
+
+  }
+
+  makeComputerMove() {
+    this.ai.aiMove();
+  }
+
 }

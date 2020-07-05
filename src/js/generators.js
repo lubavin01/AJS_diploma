@@ -40,6 +40,11 @@ export function randomDecimal(min, max) {
   return Math.floor(rnd + min);
 }
 
+export function changeCoords(character, xCoordMin, xCoordMax) {
+  const { xCoord, yCoord } = randomCoord(xCoordMin, xCoordMax, 0, 7);
+  character.position = Board.getIndex(xCoord, yCoord, 8);
+}
+
 function randomCoord(xCoordMin, xCoordMax, yCoordMin, yCoordMax, usedCoords) {
   let xCoord = null;
   let yCoord = null;
@@ -47,10 +52,8 @@ function randomCoord(xCoordMin, xCoordMax, yCoordMin, yCoordMax, usedCoords) {
     xCoord = randomDecimal(xCoordMin, xCoordMax);
     yCoord = randomDecimal(yCoordMin, yCoordMax);
 
-    debugger;
-
-    if (!usedCoords.find(i => i === `${xCoord},${yCoord}`)) {
-      return {xCoord, yCoord};
+    if (!usedCoords || !usedCoords.find(i => i === `${xCoord},${yCoord}`)) {
+      return { xCoord, yCoord };
     }
 
     xCoord = null;
