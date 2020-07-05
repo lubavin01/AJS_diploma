@@ -152,6 +152,7 @@ export default class GameController {
     victimPositionedCharacter.character.health -= damage;
     if (victimPositionedCharacter.character.health <= 0) {
       victimPositionedCharacter.character.dead = true;
+      // TODO удалить элемент команды
     }
     this.gamePlay.deselectChar();
 
