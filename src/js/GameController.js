@@ -15,11 +15,14 @@ export default class GameController {
     this.gamePlay = gamePlay;
     this.stateService = stateService;
     this.gameState = new GameState({ boardSize: this.gamePlay.boardSize });
-    this.ai = new AI(this, this.gamePlay);
-
     Board.boardSize = this.gamePlay.boardSize;
-    Board.playerTeam = this.gameState.playerTeam;
-    Board.enemyTeam = this.gameState.enemyTeam;
+    this.board = new Board(this.gameState);
+
+    this.ai = new AI(this, this.gamePlay, this.gameState, this.board);
+
+    
+    // Board.playerTeam = this.gameState.playerTeam;
+    // Board.enemyTeam = this.gameState.enemyTeam;
 
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
@@ -29,11 +32,11 @@ export default class GameController {
   }
 
   init() {
-    if (this.gameState === null) {
-      this.gameState = new GameState({ boardSize: this.gamePlay.boardSize });
-    }
+    // if (this.gameState === null) {
+    //   this.gameState = new GameState({ boardSize: this.gamePlay.boardSize });
+    // }
 
-    Board.positionedCharacters = this.gameState.positionedCharacters;
+    // Board.positionedCharacters = this.gameState.positionedCharacters;
 
     const levelIndex = this.gameState.level % 4;
     const theme = levels[levelIndex];
@@ -92,7 +95,6 @@ export default class GameController {
       this.gamePlay.showCharacterTooltip(info.positionedCharacter, index);
     } else if (info.move) {
       this.gamePlay.setCursor(pointer);
-      //this.gamePlay.selectCell(index, 'green');
       this.gamePlay.selectCellGreen(index);
     }
   }
@@ -133,13 +135,11 @@ export default class GameController {
   checkRoundEnd() {
     if (!this.gameState.enemyTeam.find(i => !i.character.dead)) {
       console.log('player won round');
-
       return 1;
     }
 
     if (!this.gameState.playerTeam.find(i => !i.character.dead)) {
       console.log('player lost round');
-      this.restartRound();
       return -1;
     }
 
@@ -149,11 +149,24 @@ export default class GameController {
   async attack(victimPositionedCharacter) {
     const damage = Math.max(this.gamePlay.selectedChar.character.attack - victimPositionedCharacter.character.defence, this.gamePlay.selectedChar.character.attack * 0.1);
     await this.gamePlay.showDamage(victimPositionedCharacter.position, damage);
+
     victimPositionedCharacter.character.health -= damage;
     if (victimPositionedCharacter.character.health <= 0) {
       victimPositionedCharacter.character.dead = true;
-      // TODO удалить элемент команды
+
+      // удаляем мертвого члена команды
+      debugger;
+      const enemyIndex = this.gameState.enemyTeam.findIndex(i => i === victimPositionedCharacter);
+      if (enemyIndex !== undefined) {
+        this.gameState.enemyTeam.splice(enemyIndex, 1);
+      } else {
+        const playerIndex = this.gameState.playerTeam.findIndex(i => i === victimPositionedCharacter);
+        if (playerIndex !== undefined) {
+          this.gameState.playerTeam.splice(playerIndex, 1);
+        }
+      }
     }
+
     this.gamePlay.deselectChar();
 
     this.gamePlay.redrawPositions(this.gameState.positionedCharacters);
@@ -183,7 +196,7 @@ export default class GameController {
     if (posCharacter) {
       const isVictimCharacter = this.isVictimCharacter(posCharacter);
       if (isVictimCharacter) {
-        if (!Board.availableToAttack(index, this.gamePlay.selectedChar, this.gamePlay.boardSize)) {
+        if (!this.board.availableToAttack(index, this.gamePlay.selectedChar, this.gamePlay.boardSize)) {
           return null;
         }
 
@@ -207,7 +220,7 @@ export default class GameController {
         return null;
       }
 
-      if (!Board.availableToMove(index, this.gamePlay.selectedChar, this.gamePlay.boardSize)) {
+      if (!this.board.availableToMove(index, this.gamePlay.selectedChar, this.gamePlay.boardSize)) {
         return null;
       }
 
@@ -219,19 +232,24 @@ export default class GameController {
 
   startNewRound() {
 
-    this.gameState.level += 1;
-    this.gameState.playerTeam.forEach(i => {
-      i.character.level += 1;
-      i.character.health = 100;
-    });
+    this.gameState.reinitializeNewLevelState(this.gameState.level += 1);
 
-    this.gameState.changePlayerTeamToInitialPosition();
+    // this.gameState.level += 1;
+    // this.gameState.playerTeam.forEach(i => {
+    //   i.character.level += 1;
+    //   i.character.health = 100;
+    // });
 
-    // переинициализируем состояние игры
-    this.gameState = new GameState({
-      level: this.gameState.level,
-      playerTeam: this.gameState.playerTeam,
-    });
+    // this.gameState.changePlayerTeamToInitialPosition();
+    // // переинициализируем состояние игры
+    // this.gameState = new GameState({
+    //   level: this.gameState.level,
+    //   playerTeam: this.gameState.playerTeam,
+    // });
+
+
+
+    //this.ai = new AI(this, this.gamePlay, this.gameState);
 
     // перерисовываем
     this.init();
